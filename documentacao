@@ -1,4 +1,4 @@
-Área destinada a documentação do projeto
+Área destinada a documentação do projeto.
 Escopo do projeto
 Para a implementação deste projeto vamo precisar usar as seguintes tecnologias:
 
@@ -12,7 +12,7 @@ JWT para adicionar segurança e limitar o acesso nas rotas de API
 JEST para nos ajudar a testar e manter a qualidade do código
 Estrutura de diretório
 project-root/
-├── src/
+├── src/tabela
 │   ├── config/
 │   ├── controllers/
 │   ├── middleware/
