@@ -1,0 +1,75 @@
+//Tabela de Associação  ProductCategory 
+
+
+// models/ProductCategory.js
+module.exports = (sequelize, DataTypes) => {
+  const ProductCategory = sequelize.define('ProductCategory', {
+    product_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'products',
+        key: 'id',
+      },
+      onDelete: 'CASCADE',
+    },
+    category_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'categories',
+        key: 'id',
+      },
+      onDelete: 'CASCADE',
+    },
+  }, {
+    tableName: 'product_categories',
+    timestamps: false,
+  });
+
+  return ProductCategory;
+};
+
+/////////////////////////////////////////////
+
+//Estrutura de Endpoints
+//Relacionar Produto com Categorias (/products/:productId/categories)
+
+POST /products/:productId/categories → Associar um produto a uma ou mais categorias
+
+GET /products/:productId/categories → Ver categorias de um produto
+
+
+/////////////////////////////////////////
+
+//ProductCategory Código: routes.js
+
+// ----------------------
+// RELAÇÃO PRODUTO ↔ CATEGORIA
+// ----------------------
+
+// Associar um produto com várias categorias
+
+router.post('/products/:productId/categories', async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { categoryIds } = req.body; // Exemplo: { categoryIds: [1, 2, 3] }
+
+    const associations = categoryIds.map((categoryId) => ({
+      product_id: productId,
+      category_id: categoryId,
+    }));
+
+    await ProductCategory.bulkCreate(associations);
+    res.status(201).json({ message: 'Categorias associadas ao produto com sucesso!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+module.exports = router;
+
+
+
+
+
