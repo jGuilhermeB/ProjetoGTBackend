@@ -24,6 +24,20 @@ model User {
   updated_at DateTime @updatedAt
 }
 
+model Products {
+  id Int @id @default(autoincrement())
+  enabled Boolean? @default(false)
+  name String
+  slug String
+  use_in_menu Boolean? @default(false)
+  stock Int? @default(0)
+  description String?
+  price Float
+  price_with_discount Float
+  created_at DateTime @default(now())
+  update_at DateTime @updatedAt
+}
+
 model ImagensProduto {
   id Int @id @default(autoincrement())
   product_id Int 
