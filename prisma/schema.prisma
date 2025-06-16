@@ -23,3 +23,10 @@ model User {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 }
+
+model ImagensProduto {
+  id Int @id @default(autoincrement())
+  product_id Int 
+  enabled Boolean? @default(false)
+  path String 
+}
