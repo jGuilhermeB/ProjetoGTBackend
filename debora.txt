@@ -1,34 +1,9 @@
-//Tabela de Associação  ProductCategory 
+//json teste
 
-
-// models/ProductCategory.js
-module.exports = (sequelize, DataTypes) => {
-  const ProductCategory = sequelize.define('ProductCategory', {
-    product_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'products',
-        key: 'id',
-      },
-      onDelete: 'CASCADE',
-    },
-    category_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'categories',
-        key: 'id',
-      },
-      onDelete: 'CASCADE',
-    },
-  }, {
-    tableName: 'product_categories',
-    timestamps: false,
-  });
-
-  return ProductCategory;
-};
+///{
+  "productId": 1,
+  "categoryId": 2
+}
 
 /////////////////////////////////////////////
 
