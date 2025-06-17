@@ -1,18 +1,29 @@
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
+const { generateToken } = require('../config/jwt');
 
-async function registerUser(firstname, surname, email, password) {
-  const userExists = await prisma.user.findUnique({
+/**
+ * Registra um novo usuário
+ * @param {String} firstname - Nome do usuário
+ * @param {String} surname - Sobrenome do usuário
+ * @param {String} email - Email do usuário
+ * @param {String} password - Senha do usuário
+ * @returns {Object} Usuário criado
+ */
+const registerUser = async (firstname, surname, email, password) => {
+  // Verifica se o email já está em uso
+  const existingUser = await prisma.user.findUnique({
     where: { email }
   });
 
-  if (userExists) {
+  if (existingUser) {
     throw new Error('Email já cadastrado');
   }
 
+  // Criptografa a senha
   const hashedPassword = await bcrypt.hash(password, 10);
-  
+
+  // Cria o usuário
   const user = await prisma.user.create({
     data: {
       firstname,
@@ -24,53 +35,69 @@ async function registerUser(firstname, surname, email, password) {
       id: true,
       firstname: true,
       surname: true,
-      email: true
+      email: true,
+      createdAt: true
     }
   });
 
   return user;
-}
+};
 
-async function loginUser(email, password) {
+/**
+ * Autentica um usuário
+ * @param {String} email - Email do usuário
+ * @param {String} password - Senha do usuário
+ * @returns {Object} Token e dados do usuário
+ */
+const loginUser = async (email, password) => {
+  // Busca o usuário pelo email
   const user = await prisma.user.findUnique({
     where: { email }
   });
 
   if (!user) {
-    throw new Error('Usuário não encontrado');
+    throw new Error('Email ou senha inválidos');
   }
 
+  // Verifica a senha
   const validPassword = await bcrypt.compare(password, user.password);
-  
+
   if (!validPassword) {
-    throw new Error('Senha inválida');
+    throw new Error('Email ou senha inválidos');
   }
 
-  const token = jwt.sign(
-    { id: user.id },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRATION }
-  );
+  // Gera o token
+  const token = generateToken({
+    id: user.id,
+    email: user.email
+  });
 
+  // Retorna os dados do usuário e o token
   return {
-    token,
     user: {
       id: user.id,
       firstname: user.firstname,
       surname: user.surname,
       email: user.email
-    }
+    },
+    token
   };
-}
+};
 
-async function getUserById(id) {
+/**
+ * Busca um usuário pelo ID
+ * @param {Number} id - ID do usuário
+ * @returns {Object} Dados do usuário
+ */
+const getUserById = async (id) => {
   const user = await prisma.user.findUnique({
-    where: { id: Number(id) },
+    where: { id },
     select: {
       id: true,
       firstname: true,
       surname: true,
-      email: true
+      email: true,
+      createdAt: true
     }
   });
 
@@ -79,50 +106,61 @@ async function getUserById(id) {
   }
 
   return user;
-}
+};
 
-async function updateUser(id, data) {
+/**
+ * Atualiza os dados de um usuário
+ * @param {Number} id - ID do usuário
+ * @param {Object} data - Dados a serem atualizados
+ * @returns {Object} Usuário atualizado
+ */
+const updateUser = async (id, data) => {
   const user = await prisma.user.findUnique({
-    where: { id: Number(id) }
+    where: { id }
   });
 
   if (!user) {
     throw new Error('Usuário não encontrado');
   }
 
-  const updateData = { ...data };
-
+  // Se o email for alterado, verifica se já existe
   if (data.email && data.email !== user.email) {
-    const emailExists = await prisma.user.findUnique({
+    const existingUser = await prisma.user.findUnique({
       where: { email: data.email }
     });
 
-    if (emailExists) {
+    if (existingUser) {
       throw new Error('Email já cadastrado');
     }
   }
 
+  // Se a senha for alterada, criptografa
   if (data.password) {
-    updateData.password = await bcrypt.hash(data.password, 10);
+    data.password = await bcrypt.hash(data.password, 10);
   }
 
   const updatedUser = await prisma.user.update({
-    where: { id: Number(id) },
-    data: updateData,
+    where: { id },
+    data,
     select: {
       id: true,
       firstname: true,
       surname: true,
-      email: true
+      email: true,
+      createdAt: true
     }
   });
 
   return updatedUser;
-}
+};
 
-async function deleteUser(id) {
+/**
+ * Remove um usuário
+ * @param {Number} id - ID do usuário
+ */
+const deleteUser = async (id) => {
   const user = await prisma.user.findUnique({
-    where: { id: Number(id) }
+    where: { id }
   });
 
   if (!user) {
@@ -130,9 +168,9 @@ async function deleteUser(id) {
   }
 
   await prisma.user.delete({
-    where: { id: Number(id) }
+    where: { id }
   });
-}
+};
 
 module.exports = {
   registerUser,

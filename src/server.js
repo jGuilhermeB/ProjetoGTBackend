@@ -2,19 +2,20 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
-const swaggerJsdoc = require('swagger-jsdoc');
+const swaggerJsDoc = require('swagger-jsdoc');
 const routes = require('./routes');
 
 const app = express();
+const PORTA = process.env.PORTA || 3000;
 
 // Configuração do Swagger
-const swaggerOptions = {
+const opcoesSwagger = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'API de E-commerce',
       version: '1.0.0',
-      description: 'API para gerenciamento de produtos, categorias e pedidos',
+      description: 'API para sistema de e-commerce',
       contact: {
         name: 'Suporte',
         email: 'suporte@exemplo.com'
@@ -22,15 +23,24 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: `http://localhost:${process.env.PORT || 3000}`,
-        description: 'Servidor de desenvolvimento'
+        url: `http://localhost:${PORTA}`,
+        description: 'Servidor de Desenvolvimento'
       }
-    ]
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT'
+        }
+      }
+    }
   },
   apis: ['./src/routes/*.js']
 };
 
-const swaggerDocs = swaggerJsdoc(swaggerOptions);
+const swaggerDocs = swaggerJsDoc(opcoesSwagger);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Middlewares
@@ -40,34 +50,17 @@ app.use(express.json());
 // Rotas
 app.use('/api', routes);
 
-// Middleware para log de requisições
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
-});
-
-// Tratamento de erros
-app.use((err, req, res, next) => {
-  console.error(err.stack);
+// Middleware de tratamento de erros
+app.use((erro, req, res, next) => {
+  console.error(erro);
   res.status(500).json({
-    status: 'error',
-    message: 'Erro interno do servidor',
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Tratamento de rotas não encontradas
-app.use((req, res) => {
-  res.status(404).json({
-    status: 'error',
-    message: 'Rota não encontrada',
-    timestamp: new Date().toISOString()
+    sucesso: false,
+    erro: 'Erro interno do servidor'
   });
 });
 
 // Inicialização do servidor
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-  console.log(`Documentação disponível em http://localhost:${PORT}/api-docs`);
+app.listen(PORTA, () => {
+  console.log(`Servidor rodando na porta ${PORTA}`);
+  console.log(`Documentação disponível em: http://localhost:${PORTA}/api-docs`);
 });

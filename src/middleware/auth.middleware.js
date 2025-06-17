@@ -1,5 +1,4 @@
-const jwt = require('jsonwebtoken');
-const prisma = require('../config/prisma');
+const { verificarToken } = require('../config/jwt');
 const response = require('../utils/response');
 
 /**
@@ -12,49 +11,42 @@ const response = require('../utils/response');
  *       bearerFormat: JWT
  */
 
-const authMiddleware = async (req, res, next) => {
+/**
+ * Middleware de autenticação
+ * Verifica se o token JWT é válido
+ */
+const middlewareAutenticacao = (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    // Obtém o token do cabeçalho
+    const cabecalhoAutenticacao = req.headers.authorization;
 
-    if (!authHeader) {
-      return res.status(401).json(response.unauthorized('Token não fornecido'));
+    if (!cabecalhoAutenticacao) {
+      return res.status(401).json(response.naoAutorizado('Token não fornecido'));
     }
 
-    const parts = authHeader.split(' ');
+    // Verifica se o token está no formato correto
+    const partes = cabecalhoAutenticacao.split(' ');
 
-    if (parts.length !== 2) {
-      return res.status(401).json(response.unauthorized('Token mal formatado'));
+    if (partes.length !== 2) {
+      return res.status(401).json(response.naoAutorizado('Token mal formatado'));
     }
 
-    const [scheme, token] = parts;
+    const [esquema, token] = partes;
 
-    if (!/^Bearer$/i.test(scheme)) {
-      return res.status(401).json(response.unauthorized('Token mal formatado'));
+    if (!/^Bearer$/i.test(esquema)) {
+      return res.status(401).json(response.naoAutorizado('Token mal formatado'));
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
-      if (err) {
-        return res.status(401).json(response.unauthorized('Token inválido'));
-      }
+    // Verifica o token
+    const dadosDecodificados = verificarToken(token);
 
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.id }
-      });
+    // Adiciona o ID do usuário na requisição
+    req.idUsuario = dadosDecodificados.id;
 
-      if (!user) {
-        return res.status(401).json(response.unauthorized('Usuário não encontrado'));
-      }
-
-      req.user = {
-        id: user.id,
-        email: user.email
-      };
-
-      return next();
-    });
-  } catch (error) {
-    return res.status(500).json(response.serverError('Erro ao autenticar'));
+    return next();
+  } catch (erro) {
+    return res.status(401).json(response.naoAutorizado(erro.message));
   }
 };
 
-module.exports = authMiddleware; 
+module.exports = middlewareAutenticacao; 

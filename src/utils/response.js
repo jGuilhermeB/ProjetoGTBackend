@@ -17,42 +17,60 @@
  *           format: date-time
  */
 
-const response = {
-  success: (data, status = 200) => ({
-    status: 'success',
-    data,
-    timestamp: new Date().toISOString()
-  }),
+/**
+ * Formata uma resposta de sucesso
+ * @param {*} dados - Dados a serem retornados
+ * @returns {Object} Resposta formatada
+ */
+const sucesso = (dados) => ({
+  sucesso: true,
+  dados
+});
 
-  error: (message, status = 400) => ({
-    status: 'error',
-    message,
-    timestamp: new Date().toISOString()
-  }),
+/**
+ * Formata uma resposta de erro
+ * @param {String} mensagem - Mensagem de erro
+ * @returns {Object} Resposta formatada
+ */
+const erro = (mensagem) => ({
+  sucesso: false,
+  erro: mensagem
+});
 
-  notFound: (message = 'Recurso não encontrado') => ({
-    status: 'error',
-    message,
-    timestamp: new Date().toISOString()
-  }),
+/**
+ * Formata uma resposta de não encontrado
+ * @param {String} mensagem - Mensagem de erro
+ * @returns {Object} Resposta formatada
+ */
+const naoEncontrado = (mensagem) => ({
+  sucesso: false,
+  erro: mensagem || 'Recurso não encontrado'
+});
 
-  unauthorized: (message = 'Não autorizado') => ({
-    status: 'error',
-    message,
-    timestamp: new Date().toISOString()
-  }),
+/**
+ * Formata uma resposta de não autorizado
+ * @param {String} mensagem - Mensagem de erro
+ * @returns {Object} Resposta formatada
+ */
+const naoAutorizado = (mensagem) => ({
+  sucesso: false,
+  erro: mensagem || 'Não autorizado'
+});
 
-  forbidden: (message = 'Acesso negado') => ({
-    status: 'error',
-    message,
-    timestamp: new Date().toISOString()
-  }),
+/**
+ * Formata uma resposta de erro do servidor
+ * @param {String} mensagem - Mensagem de erro
+ * @returns {Object} Resposta formatada
+ */
+const erroServidor = (mensagem) => ({
+  sucesso: false,
+  erro: mensagem || 'Erro interno do servidor'
+});
 
-  serverError: (message = 'Erro interno do servidor') => ({
-    status: 'error',
-    message,
-    timestamp: new Date().toISOString()
-  })
-};
-
-module.exports = response; 
+module.exports = {
+  sucesso,
+  erro,
+  naoEncontrado,
+  naoAutorizado,
+  erroServidor
+}; 
