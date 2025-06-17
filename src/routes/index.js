@@ -9,7 +9,7 @@ const orderRoutes = require('./order.routes');
  * @swagger
  * tags:
  *   name: Auth
- *   description: Autenticação de usuários
+ *   description: Autenticação de usuários.
  */
 
 /**
