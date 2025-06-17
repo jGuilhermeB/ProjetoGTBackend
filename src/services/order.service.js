@@ -1,245 +1,81 @@
 const prisma = require('../config/prisma');
 const { Prisma } = require('@prisma/client');
 
-// Validações
 const validations = {
   items: (items) => {
-    if (!Array.isArray(items) || items.length === 0) return false;
-    return items.every(item => (
-      item.productId &&
-      item.quantity > 0 &&
-      item.options !== undefined
-    ));
-  },
-  status: (status) => ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'].includes(status)
-};
-
-// Função para validar pedido
-const validateOrder = (data) => {
-  const errors = [];
-
-  if (!validations.items(data.items)) {
-    errors.push('Itens do pedido inválidos. Cada item deve ter productId, quantity e options');
-  }
-
-  if (errors.length > 0) {
-    throw new Error(errors.join(', '));
-  }
-};
-
-// Função para calcular o total do pedido
-const calculateOrderTotal = (items) => {
-  return items.reduce((total, item) => {
-    const price = item.price || 0;
-    return total + (price * item.quantity);
-  }, 0);
-};
-
-// Função para verificar estoque
-const checkStock = async (items) => {
-  for (const item of items) {
-    const product = await prisma.product.findUnique({
-      where: { id: Number(item.productId) }
-    });
-
-    if (!product) {
-      throw new Error(`Produto ${item.productId} não encontrado`);
+    if (!Array.isArray(items) || items.length === 0) {
+      throw new Error('É necessário informar pelo menos um item');
     }
+    return items.map(item => ({
+      product_id: Number(item.product_id),
+      quantity: Number(item.quantity),
+      options: item.options || []
+    }));
+  },
+  status: (status) => {
+    const validStatuses = ['pending', 'processing', 'completed', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      throw new Error('Status inválido');
+    }
+    return status;
+  }
+};
 
+const createOrder = async (userId, items) => {
+  const validatedItems = validations.items(items);
+
+  const products = await prisma.product.findMany({
+    where: {
+      id: { in: validatedItems.map(item => item.product_id) }
+    },
+    include: {
+      options: true
+    }
+  });
+
+  if (products.length !== validatedItems.length) {
+    throw new Error('Um ou mais produtos não existem');
+  }
+
+  const orderItems = validatedItems.map(item => {
+    const product = products.find(p => p.id === item.product_id);
     if (product.stock < item.quantity) {
       throw new Error(`Estoque insuficiente para o produto ${product.name}`);
     }
-  }
-};
 
-// Função para atualizar estoque
-const updateStock = async (items, operation = 'decrease') => {
-  for (const item of items) {
-    await prisma.product.update({
-      where: { id: Number(item.productId) },
-      data: {
-        stock: {
-          [operation === 'decrease' ? 'decrement' : 'increment']: item.quantity
-        }
+    const options = item.options.map(option => {
+      const productOption = product.options.find(opt => opt.title === option.title);
+      if (!productOption) {
+        throw new Error(`Opção ${option.title} não existe para o produto ${product.name}`);
       }
-    });
-  }
-};
-
-async function createOrder(userId, data) {
-  try {
-    validateOrder(data);
-
-    // Verificar estoque
-    await checkStock(data.items);
-
-    // Calcular total
-    const total = calculateOrderTotal(data.items);
-
-    // Criar pedido com transação
-    const order = await prisma.$transaction(async (prisma) => {
-      // Criar pedido
-      const newOrder = await prisma.order.create({
-        data: {
-          userId: Number(userId),
-          status: 'pending',
-          total,
-          items: {
-            create: data.items.map(item => ({
-              productId: Number(item.productId),
-              quantity: item.quantity,
-              price: item.price,
-              options: item.options ? JSON.stringify(item.options) : null
-            }))
-          }
-        },
-        include: {
-          items: {
-            include: {
-              product: true
-            }
-          }
-        }
-      });
-
-      // Atualizar estoque
-      await updateStock(data.items, 'decrease');
-
-      return newOrder;
-    });
-
-    // Formatar resposta
-    order.items = order.items.map(item => ({
-      ...item,
-      options: item.options ? JSON.parse(item.options) : null
-    }));
-
-    return order;
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      throw new Error('Erro ao criar pedido: ' + error.message);
-    }
-    throw error;
-  }
-}
-
-async function getOrderById(id) {
-  try {
-    const order = await prisma.order.findUnique({
-      where: { id: Number(id) },
-      include: {
-        items: {
-          include: {
-            product: true
-          }
-        }
+      if (!productOption.values.includes(option.value)) {
+        throw new Error(`Valor ${option.value} não é válido para a opção ${option.title} do produto ${product.name}`);
       }
-    });
-
-    if (!order) {
-      throw new Error('Pedido não encontrado');
-    }
-
-    // Formatar resposta
-    order.items = order.items.map(item => ({
-      ...item,
-      options: item.options ? JSON.parse(item.options) : null
-    }));
-
-    return order;
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      throw new Error('Erro ao buscar pedido: ' + error.message);
-    }
-    throw error;
-  }
-}
-
-async function listOrders(params) {
-  try {
-    const {
-      limit = 10,
-      page = 1,
-      status,
-      userId
-    } = params;
-
-    const skip = (page - 1) * limit;
-    const where = {};
-
-    if (status) {
-      where.status = status;
-    }
-
-    if (userId) {
-      where.userId = Number(userId);
-    }
-
-    const [orders, total] = await Promise.all([
-      prisma.order.findMany({
-        where,
-        include: {
-          items: {
-            include: {
-              product: true
-            }
-          }
-        },
-        skip: limit === -1 ? undefined : skip,
-        take: limit === -1 ? undefined : limit,
-        orderBy: { createdAt: 'desc' }
-      }),
-      prisma.order.count({ where })
-    ]);
-
-    // Formatar resposta
-    orders.forEach(order => {
-      order.items = order.items.map(item => ({
-        ...item,
-        options: item.options ? JSON.parse(item.options) : null
-      }));
+      return option;
     });
 
     return {
-      data: orders,
-      total,
-      limit,
-      page,
-      total_pages: Math.ceil(total / limit)
+      product_id: product.id,
+      quantity: item.quantity,
+      price: product.price,
+      options: options
     };
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      throw new Error('Erro ao listar pedidos: ' + error.message);
-    }
-    throw error;
-  }
-}
+  });
 
-async function updateOrderStatus(id, status) {
-  try {
-    if (!validations.status(status)) {
-      throw new Error('Status inválido');
-    }
-
-    const order = await prisma.order.findUnique({
-      where: { id: Number(id) },
-      include: {
-        items: true
-      }
-    });
-
-    if (!order) {
-      throw new Error('Pedido não encontrado');
-    }
-
-    // Se o pedido for cancelado, devolver o estoque
-    if (status === 'cancelled' && order.status !== 'cancelled') {
-      await updateStock(order.items, 'increase');
-    }
-
-    const updatedOrder = await prisma.order.update({
-      where: { id: Number(id) },
-      data: { status },
+  return prisma.$transaction(async (prisma) => {
+    const order = await prisma.order.create({
+      data: {
+        user_id: userId,
+        status: 'pending',
+        items: {
+          create: orderItems.map(item => ({
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price: item.price,
+            options: item.options
+          }))
+        }
+      },
       include: {
         items: {
           include: {
@@ -249,60 +85,163 @@ async function updateOrderStatus(id, status) {
       }
     });
 
-    // Formatar resposta
-    updatedOrder.items = updatedOrder.items.map(item => ({
-      ...item,
-      options: item.options ? JSON.parse(item.options) : null
-    }));
+    await Promise.all(orderItems.map(item => 
+      prisma.product.update({
+        where: { id: item.product_id },
+        data: {
+          stock: {
+            decrement: item.quantity
+          }
+        }
+      })
+    ));
 
-    return updatedOrder;
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      throw new Error('Erro ao atualizar status do pedido: ' + error.message);
-    }
-    throw error;
-  }
-}
+    return order;
+  });
+};
 
-async function deleteOrder(id) {
-  try {
-    const order = await prisma.order.findUnique({
-      where: { id: Number(id) },
-      include: {
-        items: true
+const getOrderById = async (id) => {
+  const order = await prisma.order.findUnique({
+    where: { id: Number(id) },
+    include: {
+      items: {
+        include: {
+          product: true
+        }
       }
-    });
-
-    if (!order) {
-      throw new Error('Pedido não encontrado');
     }
+  });
 
-    // Só permite deletar pedidos pendentes
-    if (order.status !== 'pending') {
-      throw new Error('Apenas pedidos pendentes podem ser deletados');
-    }
-
-    await prisma.$transaction(async (prisma) => {
-      // Deletar itens do pedido
-      await prisma.orderItem.deleteMany({
-        where: { orderId: Number(id) }
-      });
-
-      // Deletar pedido
-      await prisma.order.delete({
-        where: { id: Number(id) }
-      });
-
-      // Devolver estoque
-      await updateStock(order.items, 'increase');
-    });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      throw new Error('Erro ao deletar pedido: ' + error.message);
-    }
-    throw error;
+  if (!order) {
+    throw new Error('Pedido não encontrado');
   }
-}
+
+  return order;
+};
+
+const listOrders = async (filters = {}) => {
+  const { limit = 10, page = 1, status, sort_by = 'created_at', sort_order = 'desc' } = filters;
+  const skip = (page - 1) * limit;
+
+  const where = {};
+  if (status) {
+    where.status = validations.status(status);
+  }
+
+  const [total, orders] = await Promise.all([
+    prisma.order.count({ where }),
+    prisma.order.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { [sort_by]: sort_order },
+      include: {
+        items: {
+          include: {
+            product: true
+          }
+        }
+      }
+    })
+  ]);
+
+  return {
+    data: orders,
+    pagination: {
+      total,
+      pages: Math.ceil(total / limit),
+      page,
+      limit
+    }
+  };
+};
+
+const updateOrderStatus = async (id, status) => {
+  const order = await prisma.order.findUnique({
+    where: { id: Number(id) },
+    include: {
+      items: {
+        include: {
+          product: true
+        }
+      }
+    }
+  });
+
+  if (!order) {
+    throw new Error('Pedido não encontrado');
+  }
+
+  const validatedStatus = validations.status(status);
+
+  if (order.status === 'cancelled' && validatedStatus !== 'cancelled') {
+    throw new Error('Não é possível alterar o status de um pedido cancelado');
+  }
+
+  if (order.status === 'completed' && validatedStatus !== 'completed') {
+    throw new Error('Não é possível alterar o status de um pedido finalizado');
+  }
+
+  if (validatedStatus === 'cancelled' && order.status !== 'cancelled') {
+    await prisma.$transaction(async (prisma) => {
+      await Promise.all(order.items.map(item =>
+        prisma.product.update({
+          where: { id: item.product_id },
+          data: {
+            stock: {
+              increment: item.quantity
+            }
+          }
+        })
+      ));
+
+      await prisma.order.update({
+        where: { id: Number(id) },
+        data: { status: validatedStatus }
+      });
+    });
+  } else {
+    await prisma.order.update({
+      where: { id: Number(id) },
+      data: { status: validatedStatus }
+    });
+  }
+
+  return getOrderById(id);
+};
+
+const deleteOrder = async (id) => {
+  const order = await prisma.order.findUnique({
+    where: { id: Number(id) }
+  });
+
+  if (!order) {
+    throw new Error('Pedido não encontrado');
+  }
+
+  if (order.status !== 'pending') {
+    throw new Error('Apenas pedidos pendentes podem ser removidos');
+  }
+
+  await prisma.$transaction(async (prisma) => {
+    await Promise.all(order.items.map(item =>
+      prisma.product.update({
+        where: { id: item.product_id },
+        data: {
+          stock: {
+            increment: item.quantity
+          }
+        }
+      })
+    ));
+
+    await prisma.order.delete({
+      where: { id: Number(id) }
+    });
+  });
+
+  return order;
+};
 
 module.exports = {
   createOrder,

@@ -1,107 +1,101 @@
-const {
-  createCategory,
-  getCategoryById,
-  listCategories,
-  updateCategory,
-  deleteCategory
-} = require('../services/category.service');
+const categoryService = require('../services/category.service');
+const response = require('../utils/response');
+const validation = require('../utils/validation');
 
 // Listar categorias
-const listCategoriesController = async (req, res) => {
+const list = async (req, res) => {
   try {
-    const { limit = 12, page = 1, fields, use_in_menu } = req.query;
+    const { limit, page, useInMenu } = req.query;
+    const pagination = validation.pagination({ limit, page });
     
-    const parsedFields = fields ? fields.split(',') : [];
-    const parsedUseInMenu = use_in_menu === 'true' ? true : use_in_menu === 'false' ? false : null;
-
-    const result = await listCategories(
-      Number(limit),
-      Number(page),
-      parsedFields,
-      parsedUseInMenu
+    const categories = await categoryService.listCategories(
+      pagination.limit,
+      pagination.page,
+      useInMenu === 'true'
     );
-
-    return res.json(result);
+    
+    return res.json(response.success(categories));
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(400).json(response.error(error.message));
   }
 };
 
 // Obter categoria por ID
-const getCategoryByIdController = async (req, res) => {
+const getById = async (req, res) => {
   try {
-    const { id } = req.params;
-    const category = await getCategoryById(id);
-    return res.json(category);
+    const id = validation.id(req.params.id);
+    const category = await categoryService.getCategoryById(id);
+    return res.json(response.success(category));
   } catch (error) {
-    console.error(error);
-    if (error.message === 'Categoria não encontrada') {
-      return res.status(404).json({ error: error.message });
+    if (error.message.includes('não encontrada')) {
+      return res.status(404).json(response.notFound(error.message));
     }
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(400).json(response.error(error.message));
   }
 };
 
 // Criar categoria
-const createCategoryController = async (req, res) => {
+const create = async (req, res) => {
   try {
-    const { name, slug, use_in_menu } = req.body;
-    const category = await createCategory(name, slug, use_in_menu);
-    return res.status(201).json(category);
-  } catch (error) {
-    console.error(error);
-    if (error.message === 'Categoria já existe') {
-      return res.status(400).json({ error: error.message });
+    const { name, slug, useInMenu } = req.body;
+
+    // Validações
+    if (!name || !slug) {
+      throw new Error('Nome e slug são obrigatórios');
     }
-    return res.status(500).json({ error: 'Internal server error' });
+
+    validation.slug(slug);
+
+    const category = await categoryService.createCategory(name, slug, useInMenu);
+    return res.status(201).json(response.success(category));
+  } catch (error) {
+    if (error.message.includes('já existe')) {
+      return res.status(409).json(response.error(error.message));
+    }
+    return res.status(400).json(response.error(error.message));
   }
 };
 
 // Atualizar categoria
-const updateCategoryController = async (req, res) => {
+const update = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { name, slug, use_in_menu } = req.body;
-    
-    await updateCategory(id, {
-      name,
-      slug,
-      useInMenu: use_in_menu
-    });
+    const id = validation.id(req.params.id);
+    const { name, slug, useInMenu } = req.body;
 
-    return res.status(204).send();
+    // Validações
+    if (slug) validation.slug(slug);
+
+    const category = await categoryService.updateCategory(id, { name, slug, useInMenu });
+    return res.json(response.success(category));
   } catch (error) {
-    console.error(error);
-    if (error.message === 'Categoria não encontrada') {
-      return res.status(404).json({ error: error.message });
+    if (error.message.includes('não encontrada')) {
+      return res.status(404).json(response.notFound(error.message));
     }
-    if (error.message === 'Slug já está em uso') {
-      return res.status(400).json({ error: error.message });
+    if (error.message.includes('já existe')) {
+      return res.status(409).json(response.error(error.message));
     }
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(400).json(response.error(error.message));
   }
 };
 
 // Deletar categoria
-const deleteCategoryController = async (req, res) => {
+const remove = async (req, res) => {
   try {
-    const { id } = req.params;
-    await deleteCategory(id);
-    return res.status(204).send();
+    const id = validation.id(req.params.id);
+    await categoryService.deleteCategory(id);
+    return res.json(response.success({ message: 'Categoria removida com sucesso' }));
   } catch (error) {
-    console.error(error);
-    if (error.message === 'Categoria não encontrada') {
-      return res.status(404).json({ error: error.message });
+    if (error.message.includes('não encontrada')) {
+      return res.status(404).json(response.notFound(error.message));
     }
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(400).json(response.error(error.message));
   }
 };
 
 module.exports = {
-  listCategoriesController,
-  getCategoryByIdController,
-  createCategoryController,
-  updateCategoryController,
-  deleteCategoryController
+  create,
+  list,
+  getById,
+  update,
+  delete: remove
 }; 

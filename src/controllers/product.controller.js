@@ -1,110 +1,83 @@
 const productService = require('../services/product.service');
+const response = require('../utils/response');
+const validation = require('../utils/validation');
 
-// Funções auxiliares para formatação de resposta
-const response = {
-  success: (data, status = 200) => ({
-    status,
-    data,
-    timestamp: new Date().toISOString()
-  }),
-  error: (error, status = 400) => ({
-    status,
-    error: error.message,
-    timestamp: new Date().toISOString()
-  })
-};
-
-// Funções auxiliares para validação
-const validate = {
-  id: (id) => {
-    const numId = Number(id);
-    if (isNaN(numId) || numId < 1) {
-      throw new Error('ID inválido');
+const create = async (req, res) => {
+  try {
+    const product = await productService.createProduct(req.body);
+    return response.success(res, product, 201);
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return response.error(res, 'Slug já existe', 409);
     }
-    return numId;
-  },
-  query: (query) => {
-    const errors = [];
-
-    if (query.limit && (isNaN(query.limit) || query.limit < 1)) {
-      errors.push('Limit deve ser um número positivo');
-    }
-
-    if (query.page && (isNaN(query.page) || query.page < 1)) {
-      errors.push('Page deve ser um número positivo');
-    }
-
-    if (query.price_range) {
-      const [min, max] = query.price_range.split('-').map(Number);
-      if (isNaN(min) || isNaN(max) || min < 0 || max < min) {
-        errors.push('Price range inválido. Use o formato: min-max');
-      }
-    }
-
-    if (errors.length > 0) {
-      throw new Error(errors.join(', '));
-    }
+    return response.error(res, error.message, 400);
   }
 };
 
-// Handlers
-const handlers = {
-  create: async (req, res) => {
-    try {
-      const product = await productService.createProduct(req.body);
-      res.status(201).json(response.success(product, 201));
-    } catch (error) {
-      res.status(400).json(response.error(error));
-    }
-  },
+const list = async (req, res) => {
+  try {
+    const { limit, page, match, category_ids, price_range, stock_range, enabled, useInMenu, sort_by, sort_order } = req.query;
+    const products = await productService.listProducts({
+      limit: validation.parseLimit(limit),
+      page: validation.parsePage(page),
+      match,
+      category_ids: validation.parseArray(category_ids),
+      price_range: validation.parseRange(price_range),
+      stock_range: validation.parseRange(stock_range),
+      enabled: validation.parseBoolean(enabled),
+      useInMenu: validation.parseBoolean(useInMenu),
+      sort_by,
+      sort_order
+    });
+    return response.success(res, products);
+  } catch (error) {
+    return response.error(res, error.message, 400);
+  }
+};
 
-  getById: async (req, res) => {
-    try {
-      const id = validate.id(req.params.id);
-      const product = await productService.getProductById(id);
-      res.json(response.success(product));
-    } catch (error) {
-      res.status(404).json(response.error(error, 404));
+const getById = async (req, res) => {
+  try {
+    const product = await productService.getProductById(req.params.id);
+    if (!product) {
+      return response.error(res, 'Produto não encontrado', 404);
     }
-  },
+    return response.success(res, product);
+  } catch (error) {
+    return response.error(res, error.message, 400);
+  }
+};
 
-  list: async (req, res) => {
-    try {
-      validate.query(req.query);
-      const products = await productService.listProducts(req.query);
-      res.json(response.success(products));
-    } catch (error) {
-      res.status(400).json(response.error(error));
+const update = async (req, res) => {
+  try {
+    const product = await productService.updateProduct(req.params.id, req.body);
+    if (!product) {
+      return response.error(res, 'Produto não encontrado', 404);
     }
-  },
+    return response.success(res, product);
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return response.error(res, 'Slug já existe', 409);
+    }
+    return response.error(res, error.message, 400);
+  }
+};
 
-  update: async (req, res) => {
-    try {
-      const id = validate.id(req.params.id);
-      const product = await productService.updateProduct(id, req.body);
-      res.json(response.success(product));
-    } catch (error) {
-      const status = error.message.includes('não encontrado') ? 404 : 400;
-      res.status(status).json(response.error(error, status));
+const remove = async (req, res) => {
+  try {
+    const product = await productService.deleteProduct(req.params.id);
+    if (!product) {
+      return response.error(res, 'Produto não encontrado', 404);
     }
-  },
-
-  delete: async (req, res) => {
-    try {
-      const id = validate.id(req.params.id);
-      await productService.deleteProduct(id);
-      res.status(204).send();
-    } catch (error) {
-      const status = error.message.includes('não encontrado') ? 404 : 400;
-      res.status(status).json(response.error(error, status));
-    }
+    return response.success(res, { message: 'Produto removido com sucesso' });
+  } catch (error) {
+    return response.error(res, error.message, 400);
   }
 };
 
 module.exports = {
-  createProduct: handlers.create,
-  getProductById: handlers.getById,
-  listProducts: handlers.list,
-  updateProduct: handlers.update,
-  deleteProduct: handlers.delete
+  create,
+  list,
+  getById,
+  update,
+  delete: remove
 }; 

@@ -63,7 +63,81 @@ async function loginUser(email, password) {
   };
 }
 
+async function getUserById(id) {
+  const user = await prisma.user.findUnique({
+    where: { id: Number(id) },
+    select: {
+      id: true,
+      firstname: true,
+      surname: true,
+      email: true
+    }
+  });
+
+  if (!user) {
+    throw new Error('Usuário não encontrado');
+  }
+
+  return user;
+}
+
+async function updateUser(id, data) {
+  const user = await prisma.user.findUnique({
+    where: { id: Number(id) }
+  });
+
+  if (!user) {
+    throw new Error('Usuário não encontrado');
+  }
+
+  const updateData = { ...data };
+
+  if (data.email && data.email !== user.email) {
+    const emailExists = await prisma.user.findUnique({
+      where: { email: data.email }
+    });
+
+    if (emailExists) {
+      throw new Error('Email já cadastrado');
+    }
+  }
+
+  if (data.password) {
+    updateData.password = await bcrypt.hash(data.password, 10);
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: Number(id) },
+    data: updateData,
+    select: {
+      id: true,
+      firstname: true,
+      surname: true,
+      email: true
+    }
+  });
+
+  return updatedUser;
+}
+
+async function deleteUser(id) {
+  const user = await prisma.user.findUnique({
+    where: { id: Number(id) }
+  });
+
+  if (!user) {
+    throw new Error('Usuário não encontrado');
+  }
+
+  await prisma.user.delete({
+    where: { id: Number(id) }
+  });
+}
+
 module.exports = {
   registerUser,
-  loginUser
+  loginUser,
+  getUserById,
+  updateUser,
+  deleteUser
 }; 

@@ -32,7 +32,7 @@ async function getCategoryById(id) {
   return category;
 }
 
-async function listCategories(limit = 12, page = 1, fields = [], useInMenu = null) {
+async function listCategories(limit = 12, page = 1, useInMenu = null) {
   const skip = (page - 1) * limit;
   
   const where = {};
@@ -43,9 +43,9 @@ async function listCategories(limit = 12, page = 1, fields = [], useInMenu = nul
   const [categories, total] = await Promise.all([
     prisma.category.findMany({
       where,
-      select: fields.length > 0 ? fields.reduce((acc, field) => ({ ...acc, [field]: true }), {}) : undefined,
       skip: limit === -1 ? undefined : skip,
-      take: limit === -1 ? undefined : limit
+      take: limit === -1 ? undefined : limit,
+      orderBy: { name: 'asc' }
     }),
     prisma.category.count({ where })
   ]);
@@ -54,7 +54,8 @@ async function listCategories(limit = 12, page = 1, fields = [], useInMenu = nul
     data: categories,
     total,
     limit,
-    page
+    page,
+    total_pages: Math.ceil(total / limit)
   };
 }
 
@@ -77,10 +78,16 @@ async function updateCategory(id, data) {
     }
   }
 
-  return prisma.category.update({
+  const updatedCategory = await prisma.category.update({
     where: { id: Number(id) },
-    data
+    data: {
+      name: data.name,
+      slug: data.slug,
+      useInMenu: data.useInMenu
+    }
   });
+
+  return updatedCategory;
 }
 
 async function deleteCategory(id) {
@@ -90,6 +97,15 @@ async function deleteCategory(id) {
 
   if (!category) {
     throw new Error('Categoria não encontrada');
+  }
+
+  // Verificar se existem produtos associados
+  const productsCount = await prisma.productCategory.count({
+    where: { categoryId: Number(id) }
+  });
+
+  if (productsCount > 0) {
+    throw new Error('Não é possível deletar uma categoria que possui produtos');
   }
 
   await prisma.category.delete({
