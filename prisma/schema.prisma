@@ -14,6 +14,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ProductShape {
+  SQUARE
+  CIRCLE
+}
+enum InputType {
+  TEXT
+  COLOR
+}
+
 model User {
   id Int @id @default(autoincrement())
   firstname String

@@ -1,0 +1,11 @@
+model ProductOption {
+  id        Int      @id @default(autoincrement())
+  productId Int      @map("product_id") 
+
+  title     String
+  shape     ProductShape? @default(SQUARE) 
+  radius    Int?                @default(0)
+  type       InputType?  @default(TEXT) 
+  values    String
+  produtos Produtos @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
