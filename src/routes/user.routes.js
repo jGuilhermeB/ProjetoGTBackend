@@ -6,7 +6,7 @@ const {
   createUser,
   updateUser,
   deleteUser,
-  generateToken
+ gerarToken
 } = require('../controllers/user.controller');
 const validation = require('../utils/validation');
 
@@ -82,7 +82,7 @@ router.post('/register', createUser);
  *       401:
  *         description: Credenciais inválidas
  */
-router.post('/login', generateToken);
+router.post('/login', gerarToken);
 
 /**
  * @swagger

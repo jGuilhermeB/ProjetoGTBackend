@@ -114,7 +114,7 @@ const deleteUser = async (req, res) => {
 };
 
 // Gerar token JWT
-const generateToken = async (req, res) => {
+const gerarToken = async (req, res) => {
   try {
     const { email, password } = req.body;
     const result = await loginUser(email, password);
@@ -212,7 +212,7 @@ module.exports = {
   createUser,
   updateUser,
   deleteUser,
-  generateToken,
+  gerarToken,
   register,
   login,
   getById,

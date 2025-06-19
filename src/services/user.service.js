@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
 const prisma = require('../config/prisma');
-const { generateToken } = require('../config/jwt');
+const { gerarToken } = require('../config/jwt');
 
 /**
  * Registra um novo usuário
@@ -67,7 +67,7 @@ const loginUser = async (email, password) => {
   }
 
   // Gera o token
-  const token = generateToken({
+  const token = gerarToken({
     id: user.id,
     email: user.email
   });
