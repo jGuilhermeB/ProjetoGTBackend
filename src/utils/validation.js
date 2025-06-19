@@ -21,6 +21,7 @@
  * @returns {Number} ID validado
  */
 const validarId = (id) => {
+  console.log('ID recebido para validação:', id);
   const idNumero = Number(id);
   if (isNaN(idNumero) || idNumero <= 0) {
     throw new Error('ID inválido');
@@ -115,12 +116,28 @@ const validarEstoque = (estoque) => {
   return estoqueNumero;
 };
 
+// Middleware para validação de ID em rotas
+const idMiddleware = (req, res, next) => {
+  try {
+    const id = req.params.id;
+    console.log('ID recebido para validação:', id);
+    const idNumero = Number(id);
+    if (isNaN(idNumero) || idNumero <= 0) {
+      return res.status(400).json({ erro: 'ID inválido' });
+    }
+    next();
+  } catch (error) {
+    return res.status(400).json({ erro: error.message });
+  }
+};
+
 module.exports = {
   id: validarId,
+  idMiddleware,
   email: validarEmail,
   senha: validarSenha,
   slug: validarSlug,
   paginacao: validarPaginacao,
   preco: validarPreco,
   estoque: validarEstoque
-}; 
+};

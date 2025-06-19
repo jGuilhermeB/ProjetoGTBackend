@@ -28,7 +28,7 @@ const getUserById = async (req, res) => {
     return res.json(user);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(400).json({ erro: error.message });
   }
 };
 
@@ -45,7 +45,7 @@ const createUser = async (req, res) => {
     return res.status(201).json(user);
   } catch (error) {
     console.error(error);
-    return res.status(400).json({ error: error.message });
+    return res.status(400).json({ erro: error.message });
   }
 };
 
@@ -82,10 +82,10 @@ const updateUser = async (req, res) => {
       }
     });
 
-    return res.status(204).send();
+    return res.json({ mensagem: `Usuário atualizado com sucesso! ID: ${id}` });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(400).json({ erro: error.message });
   }
 };
 
@@ -109,7 +109,7 @@ const deleteUser = async (req, res) => {
     return res.status(204).send();
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(400).json({ erro: error.message });
   }
 };
 

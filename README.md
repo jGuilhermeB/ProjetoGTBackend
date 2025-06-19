@@ -116,6 +116,9 @@ npm run test:coverage
 ### Autenticação
 - `POST /api/auth/register`: Registra um novo usuário
 - `POST /api/auth/login`: Autentica um usuário
+- `GET /api/auth/:id`: Obtém um usuário pelo ID (requer autenticação)
+- `PUT /api/auth/:id`: Atualiza um usuário (requer autenticação)
+- `DELETE /api/auth/:id`: Remove um usuário (requer autenticação)
 
 ### Categorias
 - `GET /api/categories`: Lista todas as categorias
@@ -138,6 +141,90 @@ npm run test:coverage
 - `PUT /api/orders/:id/status`: Atualiza o status de um pedido
 - `DELETE /api/orders/:id`: Remove um pedido
 
+---
+
+## Exemplos de Payloads para Testes
+
+### Registro de Usuário
+```json
+{
+  "firstname": "João",
+  "surname": "Silva",
+  "email": "joao@email.com",
+  "password": "123456",
+  "confirmPassword": "123456"
+}
+```
+
+### Login de Usuário
+```json
+{
+  "email": "joao@email.com",
+  "password": "123456"
+}
+```
+
+### Criação de Categoria
+```json
+{
+  "name": "Roupas",
+  "slug": "roupas",
+  "useInMenu": true
+}
+```
+
+### Criação de Produto
+```json
+{
+  "name": "Camiseta Polo",
+  "slug": "camiseta-polo",
+  "description": "Camiseta polo 100% algodão",
+  "price": 99.9,
+  "priceWithDiscount": 89.9,
+  "stock": 50,
+  "enabled": true,
+  "useInMenu": true,
+  "category_ids": [1],
+  "images": [
+    { "path": "img/camiseta.jpg", "enabled": true }
+  ],
+  "options": [
+    {
+      "title": "Tamanho",
+      "shape": "square",
+      "radius": 0,
+      "type": "select",
+      "values": ["P", "M", "G"]
+    }
+  ]
+}
+```
+
+### Criação de Pedido
+```json
+{
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2,
+      "options": "{\"Tamanho\":\"M\"}"
+    }
+  ]
+}
+```
+
+### Atualização de Status do Pedido
+```json
+{
+  "status": "shipped"
+}
+```
+
+> **Nota:** Para rotas protegidas, envie o token JWT no header:
+> `Authorization: Bearer <seu_token>`
+
+---
+
 ## Contribuição
 
 1. Faça um fork do projeto
@@ -148,4 +235,4 @@ npm run test:coverage
 
 ## Licença
 
-Este projeto está licenciado sob a licença ISC. 
+Este projeto está licenciado sob a licença ISC.

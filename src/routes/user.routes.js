@@ -147,7 +147,7 @@ router.get('/:id', authMiddleware, validation.id, getUserById);
  *       404:
  *         description: Usuário não encontrado
  */
-router.put('/:id', authMiddleware, validation.id, updateUser);
+router.put('/:id', authMiddleware, validation.idMiddleware, updateUser);
 
 /**
  * @swagger
@@ -173,4 +173,4 @@ router.put('/:id', authMiddleware, validation.id, updateUser);
  */
 router.delete('/:id', authMiddleware, validation.id, deleteUser);
 
-module.exports = router; 
+module.exports = router;
