@@ -210,13 +210,21 @@ const listProducts = async (filters = {}) => {
   const skip = (page - 1) * limit;
   const where = buildWhereClause(filters);
 
+  const validSortFields = [
+    'id', 'enabled', 'name', 'slug', 'useInMenu', 'stock', 'description',
+    'price', 'priceWithDiscount', 'createdAt', 'updatedAt'
+  ];
+  let sortField = sort_by;
+  if (!validSortFields.includes(sort_by)) {
+    sortField = 'createdAt';
+  }
   const [total, products] = await Promise.all([
     prisma.product.count({ where }),
     prisma.product.findMany({
       where,
       skip,
       take: limit,
-      orderBy: { [sort_by]: sort_order },
+      orderBy: { [sortField]: sort_order },
       include: {
         categories: {
           include: {
@@ -358,4 +366,4 @@ module.exports = {
   listProducts,
   updateProduct,
   deleteProduct
-}; 
+};

@@ -17,9 +17,10 @@ const create = async (req, res) => {
 const list = async (req, res) => {
   try {
     const { limit, page, status, sort_by, sort_order } = req.query;
+    const { limite, pagina } = validation.paginacao({ limite: limit, pagina: page });
     const orders = await orderService.listOrders({
-      limit: validation.parseLimit(limit),
-      page: validation.parsePage(page),
+      limit: limite,
+      page: pagina,
       status,
       sort_by,
       sort_order
@@ -77,4 +78,4 @@ module.exports = {
   getById,
   updateStatus,
   delete: remove
-}; 
+};

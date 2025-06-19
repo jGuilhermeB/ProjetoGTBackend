@@ -171,7 +171,14 @@ router.get('/', productController.list);
  *       404:
  *         description: Produto não encontrado
  */
-router.get('/:id', validation.id, productController.getById);
+router.get('/:id', (req, res, next) => {
+  try {
+    req.params.id = validation.id(req.params.id);
+    next();
+  } catch (error) {
+    return res.status(400).json({ sucesso: false, erro: error.message });
+  }
+}, productController.getById);
 
 /**
  * @swagger
@@ -282,4 +289,4 @@ router.put('/:id', authMiddleware, validation.id, productController.update);
  */
 router.delete('/:id', authMiddleware, validation.id, productController.delete);
 
-module.exports = router; 
+module.exports = router;

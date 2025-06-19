@@ -17,15 +17,16 @@ const create = async (req, res) => {
 const list = async (req, res) => {
   try {
     const { limit, page, match, category_ids, price_range, stock_range, enabled, useInMenu, sort_by, sort_order } = req.query;
+    const { limite, pagina } = validation.paginacao({ limite: limit, pagina: page });
     const products = await productService.listProducts({
-      limit: validation.parseLimit(limit),
-      page: validation.parsePage(page),
+      limit: limite,
+      page: pagina,
       match,
-      category_ids: validation.parseArray(category_ids),
-      price_range: validation.parseRange(price_range),
-      stock_range: validation.parseRange(stock_range),
-      enabled: validation.parseBoolean(enabled),
-      useInMenu: validation.parseBoolean(useInMenu),
+      category_ids: validation.parseArray ? validation.parseArray(category_ids) : category_ids,
+      price_range: validation.parseRange ? validation.parseRange(price_range) : price_range,
+      stock_range: validation.parseRange ? validation.parseRange(stock_range) : stock_range,
+      enabled: validation.parseBoolean ? validation.parseBoolean(enabled) : enabled,
+      useInMenu: validation.parseBoolean ? validation.parseBoolean(useInMenu) : useInMenu,
       sort_by,
       sort_order
     });
@@ -80,4 +81,4 @@ module.exports = {
   getById,
   update,
   delete: remove
-}; 
+};
