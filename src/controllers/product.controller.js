@@ -5,12 +5,12 @@ const validation = require('../utils/validation');
 const create = async (req, res) => {
   try {
     const product = await productService.createProduct(req.body);
-    return response.success(res, product, 201);
+    return res.status(201).json(response.sucesso(product));
   } catch (error) {
     if (error.code === 'P2002') {
-      return response.error(res, 'Slug já existe', 409);
+      return res.status(409).json(response.erro('Slug já existe'));
     }
-    return response.error(res, error.message, 400);
+    return res.status(400).json(response.erro(error.message));
   }
 };
 
@@ -29,9 +29,9 @@ const list = async (req, res) => {
       sort_by,
       sort_order
     });
-    return response.success(res, products);
+    return res.json(response.sucesso(products));
   } catch (error) {
-    return response.error(res, error.message, 400);
+    return res.status(400).json(response.erro(error.message));
   }
 };
 
@@ -39,11 +39,11 @@ const getById = async (req, res) => {
   try {
     const product = await productService.getProductById(req.params.id);
     if (!product) {
-      return response.error(res, 'Produto não encontrado', 404);
+      return res.status(404).json(response.naoEncontrado('Produto não encontrado'));
     }
-    return response.success(res, product);
+    return res.json(response.sucesso(product));
   } catch (error) {
-    return response.error(res, error.message, 400);
+    return res.status(400).json(response.erro(error.message));
   }
 };
 
@@ -51,14 +51,14 @@ const update = async (req, res) => {
   try {
     const product = await productService.updateProduct(req.params.id, req.body);
     if (!product) {
-      return response.error(res, 'Produto não encontrado', 404);
+      return res.status(404).json(response.naoEncontrado('Produto não encontrado'));
     }
-    return response.success(res, product);
+    return res.json(response.sucesso(product));
   } catch (error) {
     if (error.code === 'P2002') {
-      return response.error(res, 'Slug já existe', 409);
+      return res.status(409).json(response.erro('Slug já existe'));
     }
-    return response.error(res, error.message, 400);
+    return res.status(400).json(response.erro(error.message));
   }
 };
 
@@ -66,11 +66,11 @@ const remove = async (req, res) => {
   try {
     const product = await productService.deleteProduct(req.params.id);
     if (!product) {
-      return response.error(res, 'Produto não encontrado', 404);
+      return res.status(404).json(response.naoEncontrado('Produto não encontrado'));
     }
-    return response.success(res, { message: 'Produto removido com sucesso' });
+    return res.json(response.sucesso({ message: 'Produto removido com sucesso' }));
   } catch (error) {
-    return response.error(res, error.message, 400);
+    return res.status(400).json(response.erro(error.message));
   }
 };
 

@@ -138,7 +138,7 @@ const register = async (req, res) => {
     }
 
     const user = await userService.registerUser(firstname, surname, email, password);
-    return res.status(201).json(response.success(user));
+    return res.status(201).json(response.sucesso(user));
   } catch (error) {
     if (error.message.includes('Email já cadastrado')) {
       return res.status(409).json(response.error(error.message));
@@ -156,7 +156,7 @@ const login = async (req, res) => {
     validation.password(password);
 
     const result = await userService.loginUser(email, password);
-    return res.json(response.success(result));
+    return res.json(response.sucesso(result));
   } catch (error) {
     return res.status(401).json(response.unauthorized(error.message));
   }
@@ -166,7 +166,7 @@ const getById = async (req, res) => {
   try {
     const id = validation.id(req.params.id);
     const user = await userService.getUserById(id);
-    return res.json(response.success(user));
+    return res.json(response.sucesso(user));
   } catch (error) {
     if (error.message.includes('não encontrado')) {
       return res.status(404).json(response.notFound(error.message));
@@ -185,7 +185,7 @@ const update = async (req, res) => {
     if (password) validation.password(password);
 
     const user = await userService.updateUser(id, { firstname, surname, email, password });
-    return res.json(response.success(user));
+    return res.json(response.sucesso(user));
   } catch (error) {
     if (error.message.includes('não encontrado')) {
       return res.status(404).json(response.notFound(error.message));
@@ -198,7 +198,7 @@ const remove = async (req, res) => {
   try {
     const id = validation.id(req.params.id);
     await userService.deleteUser(id);
-    return res.json(response.success({ message: 'Usuário removido com sucesso' }));
+    return res.json(response.sucesso({ message: 'Usuário removido com sucesso' }));
   } catch (error) {
     if (error.message.includes('não encontrado')) {
       return res.status(404).json(response.notFound(error.message));
@@ -218,4 +218,4 @@ module.exports = {
   getById,
   update,
   delete: remove
-}; 
+};
